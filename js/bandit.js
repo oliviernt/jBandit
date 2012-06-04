@@ -2,10 +2,12 @@
     $.fn.jBandit = function(options){
         var defaults = {
             autoPlay: true,
-            shift: true,//valid values: true | false | "next" | "previous"
+            direction: "vertical",//valid values: "vertical" | "horizontal"
+            shift: true,//valid values: true | "next" | "previous"
             pager: true,
             pagerBullets: false,
-            listType: "ul"//valid values: "ul" | "ol"
+            listType: "ul",//valid values: "ul" | "ol"
+            timeout: 1000
         },
         maxHeight = 100,
         maxWidth = 75;
@@ -34,9 +36,35 @@
          * activates a random Kachel
          */
         var activateRandom = function($arr, max, isNext){
-            var rand = randomInRange(0, max);
-            $($arr[rand]).addClass("active").css("top", "0px");
-            $("li:not(.active)", $arr.parent()).css("top", (isNext?"-"+maxHeight+"px":""+maxHeight+"px"));
+            var rand = randomInRange(0, max),
+                css = {};
+            if (options.direction === "horizontal") {
+                if (isNext) {
+                    css.left = "-" + maxWidth + "px";
+                }
+                else {
+                    css.left = maxWidth + "px";
+                }
+            }
+            else if (options.direction === "vertical") {
+                if (isNext) {
+                    css.top = "-" + maxHeight + "px";
+                }
+                else {
+                    css.top = maxHeight + "px";
+                }
+            }
+            $("li:not(.active)", $arr.parent()).css(css);
+
+            css = {};
+            if (options.direction === "horizontal") {
+                css.left = 0;
+            }
+            else if (options.direction === "vertical") {
+                css.top = 0;
+            }
+
+            $($arr[rand]).addClass("active").css(css);
             return rand;
         };
         
@@ -44,57 +72,96 @@
          * activates the next Kachel in a (un)ordered list
          */
         var next = function($list, active) {
-            var $arr = $list.find("li");
-            $($arr[active]).removeClass("active").animate({
-                "top" : maxHeight+"px"
-            }, function(){
-                $("li:not(.active)", $list).css("top", "-"+maxHeight+"px");
+            var $arr = $list.find("li"),
+                animate = {};
+            if (options.direction === "horizontal") {
+                animate.left = maxWidth + "px";
+            }
+            else if (options.direction === "vertical") {
+                animate.top = maxHeight + "px";
+            }
+
+            $($arr[active]).removeClass("active").animate(animate, function(){
+                var css = {};
+                if (options.direction === "horizontal") {
+                    css.left = "-" + maxWidth + "px";
+                }
+                else if (options.direction === "vertical") {
+                    css.top = "-" + maxHeight + "px";
+                }
+                $("li:not(.active)", $list).css(css);
             });
             active++;
             if (active >= $arr.length || active < 0 || !$arr[active]) {
                 active = 0;
             }
-            $($arr[active]).addClass("active").animate({
-                "top" : "0"
-            });
+
+            if (options.direction === "horizontal") {
+                animate.left = 0;
+            }
+            else if (options.direction === "vertical") {
+                animate.top = 0;
+            }
+            $($arr[active]).addClass("active").animate(animate);
             return active;
         };
         
         /***
-         * activates the previous Kachel in a unordered list
+         * activates the previous Kachel in a (un)ordered list
          */
         var previous = function($list, active) {
-            var $arr = $list.find("li");
-            $($arr[active]).removeClass("active").animate({
-                "top" : "-"+maxHeight+"px"
-            }, function(){
-                $("li:not(.active)", $list).css("top", maxHeight+"px");
+            var $arr = $list.find("li"),
+                animate = {};
+
+            if (options.direction === "horizontal") {
+                animate.left = "-" + maxWidth + "px";
+            }
+            else if (options.direction === "vertical") {
+                animate.top = "-" + maxHeight + "px";
+            }
+
+            $($arr[active]).animate(animate, function(){
+                var css = {};
+                if (options.direction === "horizontal") {
+                    css.left = maxWidth + "px";
+                }
+                else if (options.direction === "vertical") {
+                    css.top = maxHeight + "px";
+                }
+                $("li:not(.active)", $list).css(css);
+                $(this).removeClass("active");
             });
             active--;
             if (active < 0 || !$arr[active]) {
                 active = $arr.length -1;
             }
-            $($arr[active]).addClass("active").animate({
-                "top" : "0"
-            });
+
+            animate = {};
+            if (options.direction === "horizontal") {
+                animate.left = 0;
+            }
+            else if (options.direction === "vertical") {
+                animate.top = 0;
+            }
+            $($arr[active]).addClass("active").animate(animate);
             return active;
         };
         
-        this.each(function(i, obj){
+        return this.each(function(i, obj){
             var $this = $(obj);
             $this.addClass("bandit");
 
             //Set maximum image height/width as maxHeight/maxWidth
-            $("img", $this).each(function(){
+            $this.find("img").each(function(){
                 var $img = $(this),
                     width = $img.width(),
                     height = $img.height();
-                    if ( width > maxWidth ) {
-                        maxWidth = width;
-                    }
-                    if ( height > maxHeight ){
-                        maxHeight = height;
-                    }
+                if ( width > maxWidth ) {
+                    maxWidth = width;
+                }
+                if ( height > maxHeight ){
+                    maxHeight = height;
+                }
             });
 
             $(options.listType+", "+options.listType+" li", $this).css({
@@ -127,7 +194,7 @@
                             else {
                                 act = previous($ul, act);
                             }
-                        }, 2000);
+                        }, options.timeout);
                     }
                 }
 
@@ -165,7 +232,4 @@
             });
         });
     };
-    $(window).load(function(){
-        $(".bandit").jBandit();
-    });
 })(window, jQuery);

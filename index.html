@@ -634,11 +634,18 @@
     </ul>
 </div>
 
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-  <script>window.jQuery || document.write('<script src="js/libs/jquery-1.7.1.min.js"><\/script>')</script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script>window.jQuery || document.write('<script src="lib/jquery-1.7.1.min.js"><\/script>')</script>
   
   
   <script src="js/bandit.js"></script>
+
+  <script>
+    $(window).load(function(){
+        var bandit = $(".bandit").jBandit();
+        console.log(bandit);
+    });
+  </script>
   
 </body>
 </html>
