@@ -1,0 +1,4 @@
+jBandit
+=======
+
+jQuery jBandit Plugin
