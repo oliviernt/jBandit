@@ -10,7 +10,17 @@
             timeout: 1000
         },
         maxHeight = 100,
-        maxWidth = 75;
+        maxWidth = 75,
+        values = {
+            "horizontal": {
+                "left" : maxWidth,
+                "top" : 0
+            },
+            "vertical" : {
+                "left" : 0,
+                "top" : maxHeight
+            }
+        };
         
         options = $.extend(defaults, options);
         
@@ -73,22 +83,16 @@
          */
         var next = function($list, active) {
             var $arr = $list.find("li"),
-                animate = {};
-            if (options.direction === "horizontal") {
-                animate.left = maxWidth + "px";
-            }
-            else if (options.direction === "vertical") {
-                animate.top = maxHeight + "px";
-            }
+                animate = {
+                    left: values[options.direction].left + "px",
+                    top: values[options.direction].top + "px"
+                };
 
             $($arr[active]).removeClass("active").animate(animate, function(){
-                var css = {};
-                if (options.direction === "horizontal") {
-                    css.left = "-" + maxWidth + "px";
-                }
-                else if (options.direction === "vertical") {
-                    css.top = "-" + maxHeight + "px";
-                }
+                var css = {
+                    left: -values[options.direction].left + "px",
+                    top: -values[options.direction].top + "px"
+                };
                 $("li:not(.active)", $list).css(css);
             });
             active++;
@@ -96,13 +100,14 @@
                 active = 0;
             }
 
-            if (options.direction === "horizontal") {
-                animate.left = 0;
-            }
-            else if (options.direction === "vertical") {
-                animate.top = 0;
+            animate = {
+                left : 0,
+                top : 0
             }
             $($arr[active]).addClass("active").animate(animate);
+            if (options.pager) {
+                updatePager($list, active);
+            }
             return active;
         };
         
@@ -111,44 +116,41 @@
          */
         var previous = function($list, active) {
             var $arr = $list.find("li"),
-                animate = {};
+                animate = {
+                    left: -values[options.direction].left + "px",
+                    top: -values[options.direction].top + "px"
+                };
 
-            if (options.direction === "horizontal") {
-                animate.left = "-" + maxWidth + "px";
-            }
-            else if (options.direction === "vertical") {
-                animate.top = "-" + maxHeight + "px";
-            }
-
-            $($arr[active]).animate(animate, function(){
-                var css = {};
-                if (options.direction === "horizontal") {
-                    css.left = maxWidth + "px";
-                }
-                else if (options.direction === "vertical") {
-                    css.top = maxHeight + "px";
-                }
+            $($arr[active]).removeClass("active").animate(animate, function(){
+                var css = {
+                    left: values[options.direction].left + "px",
+                    top: values[options.direction].top + "px"
+                };
                 $("li:not(.active)", $list).css(css);
-                $(this).removeClass("active");
             });
             active--;
             if (active < 0 || !$arr[active]) {
                 active = $arr.length -1;
             }
 
-            animate = {};
-            if (options.direction === "horizontal") {
-                animate.left = 0;
-            }
-            else if (options.direction === "vertical") {
-                animate.top = 0;
+            animate = {
+                left : 0,
+                top : 0
             }
             $($arr[active]).addClass("active").animate(animate);
+            if (options.pager) {
+                updatePager($list, active);
+            }
             return active;
         };
+
+        var updatePager = function($list, active){
+                $list.find("a.active").removeClass("active");
+                $list.find("a.anchor-" + active).addClass("active");
+        }
         
-        return this.each(function(i, obj){
-            var $this = $(obj);
+        return this.each(function(){
+            var $this = $(this);
             $this.addClass("bandit");
 
             //Set maximum image height/width as maxHeight/maxWidth
@@ -158,13 +160,15 @@
                     height = $img.height();
                 if ( width > maxWidth ) {
                     maxWidth = width;
+                    values.horizontal.left = maxWidth;
                 }
                 if ( height > maxHeight ){
                     maxHeight = height;
+                    values.vertical.top = maxHeight;
                 }
             });
 
-            $(options.listType+", "+options.listType+" li", $this).css({
+            $this.find(options.listType + ", " + options.listType + " li").css({
                 "height" : maxHeight + "px",
                 "width" : maxWidth + "px"
             });
@@ -215,14 +219,22 @@
                     $liArr.each(function(i, li){
                         var $a = $('<a />').html(options.bullets?"*":i+1).attr({
                             "href" : "#"
-                        }).css({
+                        }).addClass("anchors anchor-"+i).css({
                             "top" : i + "0px"
                         }).data({
                             "index": i
                         }).on("click.bandit", function(){
-                            $(".active", $ul).removeClass("active").css("top", (isNext?maxHeight+"px":"-"+maxHeight+"px"));
+                            $($liArr[act]).css({
+                                top: (isNext?"":"-") + maxHeight + "px",
+                                zIndex: 0
+                            });
                             act = $(this).data("index");
-                            $($liArr[act]).addClass("active").css("top", "0px");
+                            $($liArr[act]).css({
+                                top: 0,
+                                left: 0,
+                                zIndex: 99
+                            });
+                            updatePager($ul, act);
                             return false;
                         }).on("mouseover.bandit", stop).on("mouseout.bandit", start);
                         $ul.append($a);
