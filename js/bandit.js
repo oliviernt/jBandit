@@ -1,3 +1,6 @@
+/***
+ * jBandit 1.0
+ */
 (function(window, $){
     $.fn.jBandit = function(options){
         var defaults = {
