@@ -51,7 +51,7 @@
                     if (!listArray[i][j].running) {
                         listArray[i][j].interval = setInterval(function(){
                             listArray[i][j].start();
-                        }, options.timeout);
+                        }, typeof options.timeout === "object"?options.timeout[j]:options.timeout);
                     }
                 });
             });
@@ -249,22 +249,23 @@
                     if (!list.running) {
                         list.interval = setInterval(function(){
                             list.start();
-                        }, options.timeout);
+                        }, typeof options.timeout === "object"?options.timeout[j]:options.timeout);
                     }
                 }
 
                 if(options.autoPlay) {
-                    list.interval = setInterval(function(){
-                        list.start();
-                    }, options.timeout);
-                    $aArr.each(function(k, a){
-                        $(a).on("mouseover.bandit", function(){
-                            list.stop();
-                        }).on("mouseout.bandit", function(){
-                            _start();
-                        });
-                    });
+                    _start();
                 }
+
+                $aArr.each(function(k, a){
+                    $(a).on("mouseover.bandit", function(){
+                        if (R.running)
+                            list.stop();
+                    }).on("mouseout.bandit", function(){
+                        if (R.running)
+                            _start();
+                    });
+                });
 
                 //if a pager should be displayed for each Kachel
                 if ( options.pager ) {
@@ -291,9 +292,11 @@
                             list.updatePager();
                             return false;
                         }).on("mouseover.bandit", function(){
-                            list.stop();
+                            if (R.running)
+                                list.stop();
                         }).on("mouseout.bandit", function(){
-                            _start();
+                            if (R.running)
+                                _start();
                         });
                         $div.append($a);
                     });
