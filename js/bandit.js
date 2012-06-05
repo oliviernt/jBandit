@@ -5,7 +5,6 @@
             direction: "vertical",//valid values: "vertical" | "horizontal"
             shift: true,//valid values: true | "next" | "previous"
             pager: true,
-            pagerBullets: false,
             listType: "ul",//valid values: "ul" | "ol"
             timeout: 1000
         },
@@ -20,20 +19,188 @@
                 "left" : 0,
                 "top" : maxHeight
             }
-        };
+        },
+        listArray = [],
+        R;
         
         options = $.extend(defaults, options);
-        
+
+
+        function Returnable(run) {
+            this.running = run;
+        };
+        Returnable.prototype.pause = function(){
+            if(this.running){
+                this.stop();
+            }
+            else {
+                this.play();
+            }
+        };
+        Returnable.prototype.stop = function(){
+            $(listArray).each(function(i){
+                $(this).each(function(j){
+                    listArray[i][j].stop();
+                });
+            });
+            this.running = false;
+        };
+        Returnable.prototype.play = function(){
+            $(listArray).each(function(i){
+                $(this).each(function(j){
+                    if (!listArray[i][j].running) {
+                        listArray[i][j].interval = setInterval(function(){
+                            listArray[i][j].start();
+                        }, options.timeout);
+                    }
+                });
+            });
+            this.running = true;
+        };
+
+        R = new Returnable(options.autoPlay);
+
         /***
-         * Main Explanation:
-         * A "Kachel" is a list element containing a link and an image
-         * E.g.:
-         * <li>
-         *  <a href="#">
-         *   <img src="" />
-         *  </a>
-         * </li>
+         * List Class
          */
+        function List(l) {
+            this.list = l;//has to be a jQuery object
+            this.isNext = true;
+            this.active = 0;
+            this.interval = null;
+            this.running = false;
+
+            this.items = this.list.find("li");
+        }
+
+        List.prototype.setIsNext = function (iN) {
+            this.isNext = iN;
+            if (this.isNext) {
+                this.list.addClass("next");
+            } else {
+                this.list.addClass("previous");
+            }
+        };
+
+        List.prototype.setActive = function (act) {
+            this.active = act;
+        };
+
+        List.prototype.getActive = function () {
+            return this.active;
+        };
+
+        List.prototype.getItems = function () {
+            if (this.items === null) {
+                this.items = this.list.find("li");
+            }
+            return this.items;
+        };
+
+        /***
+         * activates a random item
+         */
+        List.prototype.activateRandom = function () {
+            var rand = randomInRange(0, this.items.length),
+                css = {};
+            if (this.isNext) {
+                css.left = -values[options.direction].left + "px";
+                css.top = -values[options.direction].top + "px";
+            } else {
+                css.left = values[options.direction].left + "px";
+                css.top = values[options.direction].top + "px";
+            }
+            this.items.css(css);
+            $(this.items[rand]).addClass("active").css({
+                left: 0,
+                top: 0
+            });
+            this.active = rand;
+            return rand;
+        };
+
+        /***
+         * activates the next item in list
+         */
+        List.prototype.next = function () {
+            var l = this.list;
+            this.getActiveItem(true).removeClass("active").animate({
+                left: values[options.direction].left + "px",
+                top: values[options.direction].top + "px"
+            }, function () {
+                l.find("li:not(.active)").css({
+                    left: -values[options.direction].left + "px",
+                    top: -values[options.direction].top + "px"
+                });
+            });
+            this.active++;
+            if (this.active >= this.items.length || this.active < 0 || !this.items[this.active]) {
+                this.active = 0;
+            }
+
+            this.getActiveItem(true).addClass("active").animate({
+                left : 0,
+                top : 0
+            });
+            return this.active;
+        };
+
+        /***
+         * activates the previous item in list
+         */
+        List.prototype.previous = function () {
+            var l = this.list;
+            this.getActiveItem(true).removeClass("active").animate({
+                left: -values[options.direction].left + "px",
+                top: -values[options.direction].top + "px"
+            }, function () {
+                l.find("li:not(.active)").css({
+                    left: values[options.direction].left + "px",
+                    top: values[options.direction].top + "px"
+                });
+            });
+            this.active = this.active - 1;
+            if (this.active < 0 || !this.items[this.active] || isNaN(this.active)) {
+                this.active = this.items.length - 1;
+            }
+
+            this.getActiveItem(true).addClass("active").animate({
+                left : 0,
+                top : 0
+            });
+            return this.active;
+        };
+
+        List.prototype.start = function () {
+            if (this.isNext) {
+                this.next();
+            } else {
+                this.previous();
+            }
+            if (options.pager) {
+                this.updatePager();
+            }
+            this.running = true;
+        };
+
+        List.prototype.stop = function () {
+            if (this.interval) {
+                clearInterval(this.interval);
+            }
+            this.running = false;
+        };
+
+        List.prototype.updatePager = function () {
+            this.list.find("a.active").removeClass("active");
+            this.list.find("a.anchor-" + this.active).addClass("active");
+        };
+
+        List.prototype.getActiveItem = function (jqueryWrapped) {
+            if (jqueryWrapped) {
+                return $(this.items[this.active]);
+            }
+            return this.items[this.active];
+        };
         
         /***
          * get a random number in a min to max range
@@ -42,116 +209,11 @@
           return Math.round(min+(Math.random()*(max-min)));
         }
         
-        /***
-         * activates a random Kachel
-         */
-        var activateRandom = function($arr, max, isNext){
-            var rand = randomInRange(0, max),
-                css = {};
-            if (options.direction === "horizontal") {
-                if (isNext) {
-                    css.left = "-" + maxWidth + "px";
-                }
-                else {
-                    css.left = maxWidth + "px";
-                }
-            }
-            else if (options.direction === "vertical") {
-                if (isNext) {
-                    css.top = "-" + maxHeight + "px";
-                }
-                else {
-                    css.top = maxHeight + "px";
-                }
-            }
-            $("li:not(.active)", $arr.parent()).css(css);
-
-            css = {};
-            if (options.direction === "horizontal") {
-                css.left = 0;
-            }
-            else if (options.direction === "vertical") {
-                css.top = 0;
-            }
-
-            $($arr[rand]).addClass("active").css(css);
-            return rand;
-        };
-        
-        /***
-         * activates the next Kachel in a (un)ordered list
-         */
-        var next = function($list, active) {
-            var $arr = $list.find("li"),
-                animate = {
-                    left: values[options.direction].left + "px",
-                    top: values[options.direction].top + "px"
-                };
-
-            $($arr[active]).removeClass("active").animate(animate, function(){
-                var css = {
-                    left: -values[options.direction].left + "px",
-                    top: -values[options.direction].top + "px"
-                };
-                $("li:not(.active)", $list).css(css);
-            });
-            active++;
-            if (active >= $arr.length || active < 0 || !$arr[active]) {
-                active = 0;
-            }
-
-            animate = {
-                left : 0,
-                top : 0
-            }
-            $($arr[active]).addClass("active").animate(animate);
-            if (options.pager) {
-                updatePager($list, active);
-            }
-            return active;
-        };
-        
-        /***
-         * activates the previous Kachel in a (un)ordered list
-         */
-        var previous = function($list, active) {
-            var $arr = $list.find("li"),
-                animate = {
-                    left: -values[options.direction].left + "px",
-                    top: -values[options.direction].top + "px"
-                };
-
-            $($arr[active]).removeClass("active").animate(animate, function(){
-                var css = {
-                    left: values[options.direction].left + "px",
-                    top: values[options.direction].top + "px"
-                };
-                $("li:not(.active)", $list).css(css);
-            });
-            active--;
-            if (active < 0 || !$arr[active]) {
-                active = $arr.length -1;
-            }
-
-            animate = {
-                left : 0,
-                top : 0
-            }
-            $($arr[active]).addClass("active").animate(animate);
-            if (options.pager) {
-                updatePager($list, active);
-            }
-            return active;
-        };
-
-        var updatePager = function($list, active){
-                $list.find("a.active").removeClass("active");
-                $list.find("a.anchor-" + active).addClass("active");
-        }
-        
-        return this.each(function(){
+        this.each(function(i){
             var $this = $(this);
             $this.addClass("bandit");
+
+            listArray[i] = listArray[i] || [];
 
             //Set maximum image height/width as maxHeight/maxWidth
             $this.find("img").each(function(){
@@ -172,78 +234,74 @@
                 "height" : maxHeight + "px",
                 "width" : maxWidth + "px"
             });
-            
+            //for each list
             $this.find(options.listType).each(function(j, ul){
                 var $ul = $(ul),
-                    $liArr = $ul.find("li"),// the Kachel Array
                     $aArr = $ul.find("a"),
-                    interval = null,
                     isNext = ((j % 2 == 0 && options.shift === true) || options.shift === false || options.shift === "next");
 
-                if (isNext) {
-                    $ul.addClass("next");
-                }
-                else {
-                    $ul.addClass("previous");
-                }
+                var list = new List($ul);
+                list.setIsNext(isNext);
                 
-                var act = activateRandom($liArr, $liArr.length, isNext);
+                list.activateRandom();
 
-                var start = function(){
-                    if (options.autoPlay) {
-                        interval = setInterval(function(){
-                            if (isNext) {
-                                act = next($ul, act);
-                            }
-                            else {
-                                act = previous($ul, act);
-                            }
+                function _start () {
+                    if (!list.running) {
+                        list.interval = setInterval(function(){
+                            list.start();
                         }, options.timeout);
                     }
                 }
 
-                var stop = function(){
-                    if (options.autoPlay && interval) {
-                        clearInterval(interval);
-                    }
-                };
-
-                start();
-
-                $aArr.each(function(k, a){
-                    $(a).on("mouseover.bandit", stop).on("mouseout.bandit", start);
-                });
+                if(options.autoPlay) {
+                    list.interval = setInterval(function(){
+                        list.start();
+                    }, options.timeout);
+                    $aArr.each(function(k, a){
+                        $(a).on("mouseover.bandit", function(){
+                            list.stop();
+                        }).on("mouseout.bandit", function(){
+                            _start();
+                        });
+                    });
+                }
 
                 //if a pager should be displayed for each Kachel
                 if ( options.pager ) {
                     var $div = $("<div />").addClass("pager");
-                    $liArr.each(function(i, li){
-                        var $a = $('<a />').html(options.bullets?"*":i+1).attr({
+                    $.each(list.getItems(), function(i, li){
+                        var $a = $('<a />').html(i+1).attr({
                             "href" : "#"
                         }).addClass("anchors anchor-"+i).css({
                             "top" : i + "0px"
                         }).data({
                             "index": i
                         }).on("click.bandit", function(){
-                            $($liArr[act]).css({
-                                top: (isNext?"":"-") + maxHeight + "px",
+                            list.getActiveItem(true).css({
+                                left: (list.isNext?"":"-") + values[options.direction].left + "px",
+                                top: (list.isNext?"":"-") + values[options.direction].top + "px",
                                 zIndex: 0
                             });
-                            act = $(this).data("index");
-                            $($liArr[act]).css({
+                            list.setActive($(this).data("index"));
+                            list.getActiveItem(true).css({
                                 top: 0,
                                 left: 0,
                                 zIndex: 99
                             });
-                            updatePager($ul, act);
+                            list.updatePager();
                             return false;
-                        }).on("mouseover.bandit", stop).on("mouseout.bandit", start);
+                        }).on("mouseover.bandit", function(){
+                            list.stop();
+                        }).on("mouseout.bandit", function(){
+                            _start();
+                        });
                         $div.append($a);
                     });
                     $ul.append($div);
                 }
-                
+                listArray[i][j] = list;
             });
         });
+        return R;
     };
 })(window, jQuery);
