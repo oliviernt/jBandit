@@ -216,6 +216,7 @@
 
                 //if a pager should be displayed for each Kachel
                 if ( options.pager ) {
+                    var $div = $("<div />").addClass("pager");
                     $liArr.each(function(i, li){
                         var $a = $('<a />').html(options.bullets?"*":i+1).attr({
                             "href" : "#"
@@ -237,8 +238,9 @@
                             updatePager($ul, act);
                             return false;
                         }).on("mouseover.bandit", stop).on("mouseout.bandit", start);
-                        $ul.append($a);
+                        $div.append($a);
                     });
+                    $ul.append($div);
                 }
                 
             });
